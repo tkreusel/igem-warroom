@@ -7,9 +7,13 @@ interface Props {
   teams: TeamSummary[];
   connected: boolean;
   now: number;
+  briefingUnread: boolean;
+  onOpenBriefing: () => void;
+  sound: boolean;
+  onToggleSound: () => void;
 }
 
-export function Hud({ meta, teams, connected, now }: Props) {
+export function Hud({ meta, teams, connected, now, briefingUnread, onOpenBriefing, sound, onToggleSound }: Props) {
   const freezeAt = meta ? Date.parse(meta.wikiFreezeAt) : null;
   const remaining = freezeAt ? freezeAt - now : 0;
   const tracked = teams.filter((t) => t.gitlabPath).length;
@@ -56,6 +60,17 @@ export function Hud({ meta, teams, connected, now }: Props) {
 
       <SyncCell meta={meta} now={now} />
 
+      <button className={`hud-link ${briefingUnread ? 'hud-unread' : ''}`} onClick={onOpenBriefing} title="Daily briefing (09:00 Berlin)">
+        Briefing{briefingUnread && <span className="hud-badge">NEW</span>}
+      </button>
+      <button
+        className="hud-link hud-icon"
+        onClick={onToggleSound}
+        aria-pressed={sound}
+        title={sound ? 'Alert sound on' : 'Alert sound off'}
+      >
+        {sound ? '🔊' : '🔇'}
+      </button>
       <button className="hud-link" onClick={() => openRegistryWindow()} title="Open the parts registry in its own window">
         Parts registry ↗
       </button>

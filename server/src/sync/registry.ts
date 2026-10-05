@@ -121,7 +121,16 @@ async function refreshSummary(teamId: number) {
     db.prepare('INSERT OR REPLACE INTO reg_summary_history (team_id, at, published, draft, screening, rejected) VALUES (?, ?, ?, ?, ?, ?)').run(
       teamId, now, b.published, b.draft, b.screening, b.rejected,
     );
-    if (prev) bus.emit('registry-updated');
+    if (prev) {
+      bus.emit('registry-updated');
+      bus.emit('summary-delta', {
+        teamId,
+        published: b.published - prev.published,
+        draft: b.draft - prev.draft,
+        screening: b.screening - prev.screening,
+        totals: { published: b.published, draft: b.draft, screening: b.screening },
+      });
+    }
   }
 }
 

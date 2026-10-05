@@ -1,0 +1,520 @@
+/* Watchlist, village, breaking news and briefing styles (map window). */
+
+/* ---------- watchlist / village marks ---------- */
+.tag-village {
+  background: rgba(70, 224, 200, 0.14);
+  color: var(--accent);
+}
+.tag-watch {
+  background: rgba(232, 239, 233, 0.12);
+  color: var(--ink);
+}
+.tt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  font-size: 11px;
+}
+.mark-watch {
+  color: var(--ink);
+}
+.mark-village {
+  color: var(--accent);
+}
+.seg-inline {
+  margin: 0;
+  grid-template-columns: repeat(3, 1fr);
+}
+.tp-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.btn-on {
+  background: var(--ink);
+  color: var(--page);
+  border-color: var(--ink);
+}
+.legend-buttons {
+  display: flex;
+  gap: 6px;
+}
+.tp-news,
+.bf-news {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+.tp-news li,
+.bf-news li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.bf-news-tag {
+  font: 700 9px/1 var(--mono);
+  letter-spacing: 0.12em;
+  padding: 3px 5px;
+  border-radius: 2px;
+  background: rgba(255, 59, 48, 0.15);
+  color: #ff6b61;
+}
+.sev-breaking .bf-news-tag {
+  background: #d70015;
+  color: #fff;
+}
+.bf-path {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.feed-news button {
+  border-left: 2px solid #ff3b30;
+  background: rgba(255, 59, 48, 0.06);
+}
+.feed-news.sev-breaking button {
+  background: rgba(255, 59, 48, 0.12);
+}
+.hud-icon {
+  padding: 0 12px;
+  font-size: 15px;
+}
+.hud-unread {
+  color: var(--amber);
+}
+.hud-badge {
+  margin-left: 6px;
+  font: 700 9px/1 var(--mono);
+  padding: 3px 4px;
+  border-radius: 2px;
+  background: var(--amber);
+  color: var(--page);
+  vertical-align: 2px;
+}
+
+/* ---------- BREAKING NEWS intermission ---------- */
+.breaking {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+}
+.breaking-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(215, 0, 21, 0.5) 100%);
+  box-shadow: inset 0 0 0 3px rgba(255, 59, 48, 0.85);
+  /* ~0.8 Hz: alarming, well under the 3 flashes/s photosensitivity limit. */
+  animation: alarm 1.25s ease-in-out infinite;
+}
+.breaking-scan {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, rgba(255, 40, 40, 0.05) 0 1px, transparent 1px 3px);
+}
+.breaking-banner {
+  position: absolute;
+  left: 50%;
+  top: 70px;
+  width: min(940px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: auto;
+  background: rgba(14, 4, 5, 0.94);
+  border: 1px solid #ff3b30;
+  box-shadow: 0 0 60px rgba(255, 59, 48, 0.45), 0 20px 50px rgba(0, 0, 0, 0.6);
+  animation: slam 0.55s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.breaking-slab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px;
+  background: linear-gradient(90deg, #d70015, #ff3b30 60%, #d70015);
+  color: #fff;
+  font: 800 26px/1.1 var(--sans);
+  letter-spacing: 0.22em;
+}
+.breaking-siren {
+  font-size: 20px;
+  animation: blink 1s steps(2) infinite;
+}
+.breaking-drill {
+  margin-left: auto;
+  font: 700 11px var(--mono);
+  letter-spacing: 0.15em;
+  padding: 3px 7px;
+  border: 1px solid #fff;
+}
+.breaking-body {
+  padding: 14px 20px 16px;
+}
+.breaking-kicker {
+  font: 700 12px var(--mono);
+  letter-spacing: 0.16em;
+  color: #ff6b61;
+}
+.breaking-headline {
+  margin: 6px 0;
+  font: 700 34px/1.15 var(--sans);
+  color: #fff;
+}
+.breaking-sub {
+  font: 13px var(--mono);
+  color: #f2c9c6;
+}
+.breaking-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 14px;
+}
+.breaking-actions .btn {
+  border-color: rgba(255, 59, 48, 0.6);
+  background: rgba(255, 59, 48, 0.12);
+}
+.breaking-timer {
+  height: 3px;
+  background: #ff3b30;
+  transform-origin: left;
+  animation: drain linear forwards;
+}
+.breaking-ticker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 32px;
+  overflow: hidden;
+  background: #d70015;
+  color: #fff;
+  font: 600 14px/32px var(--mono);
+  letter-spacing: 0.06em;
+  border-top: 2px solid #ff8a80;
+}
+.breaking-ticker-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: crawl 28s linear infinite;
+}
+body.shake .app {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes alarm {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes slam {
+  from {
+    transform: translateX(-50%) scale(1.25);
+    opacity: 0;
+  }
+}
+@keyframes drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+@keyframes crawl {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes shake {
+  20%,
+  60% {
+    transform: translate(-6px, 2px);
+  }
+  40%,
+  80% {
+    transform: translate(6px, -2px);
+  }
+}
+
+/* ---------- FLASH toasts ---------- */
+.flash-stack {
+  position: fixed;
+  top: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  display: grid;
+  gap: 6px;
+  width: min(560px, calc(100vw - 32px));
+}
+.flash {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  background: rgba(20, 6, 7, 0.96);
+  border: 1px solid rgba(255, 59, 48, 0.5);
+  border-left: 3px solid #ff3b30;
+  border-radius: 3px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  text-align: left;
+  animation: drop-in 0.35s ease-out;
+}
+.flash-tag {
+  font: 700 10px var(--mono);
+  letter-spacing: 0.14em;
+  background: #ff3b30;
+  color: #fff;
+  padding: 3px 6px;
+  border-radius: 2px;
+}
+.flash-kicker {
+  font: 600 10px var(--mono);
+  letter-spacing: 0.12em;
+  color: #ff6b61;
+}
+.flash-headline {
+  font-weight: 600;
+}
+@keyframes drop-in {
+  from {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breaking-vignette,
+  .breaking-siren,
+  .breaking-banner,
+  .breaking-ticker-track,
+  .flash,
+  body.shake .app {
+    animation: none;
+  }
+}
+
+/* ---------- daily briefing ---------- */
+.briefing-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  justify-content: center;
+  padding: 28px 16px;
+  background: rgba(3, 5, 6, 0.72);
+  backdrop-filter: blur(3px);
+}
+.briefing {
+  width: min(1120px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  background: var(--surface);
+}
+.bf-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px 12px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--line-strong);
+}
+.bf-eyebrow {
+  font: 600 11px var(--mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+.bf-head h1 {
+  margin: 2px 0;
+  font: 600 24px/1.2 var(--sans);
+}
+.bf-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+.bf-controls select {
+  background: var(--page);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: 5px 8px;
+}
+.bf-body {
+  padding: 16px 20px 28px;
+}
+.bf-lead {
+  margin: 0 0 14px;
+  font: 500 17px/1.5 var(--sans);
+  color: var(--ink);
+}
+.bf-kpis {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+.bf-accent {
+  color: var(--amber);
+}
+.bf-section {
+  margin-top: 18px;
+}
+.bf-section h2 {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+  font: 600 11px var(--mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.bf-section h2 .muted {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+}
+.bf-team {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+.bf-team:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.bf-team.rel-home {
+  color: var(--accent);
+  font-weight: 600;
+}
+.bf-rel {
+  margin-left: 5px;
+  font: 600 9px var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  border: 1px solid var(--line-strong);
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+.bf-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.bf-link:hover {
+  text-decoration: underline;
+}
+.bf-home-row td {
+  background: var(--accent-dim);
+}
+.bf-dossiers {
+  display: grid;
+  gap: 12px;
+}
+.bf-dossier-card {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 10px 12px;
+}
+.bf-dossier-card h3 {
+  margin: 0 0 6px;
+  font: 600 15px var(--sans);
+}
+.bf-dossier-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-bottom: 8px;
+}
+.bf-dossier-stats b {
+  font: 600 13px var(--mono);
+  color: var(--ink);
+}
+.bf-dossier-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.bf-dossier h4 {
+  margin: 0 0 4px;
+  font: 500 10px var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.bf-commits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+.bf-commits li {
+  display: flex;
+  flex-direction: column;
+}
+.bf-commits .muted {
+  font: 11px var(--mono);
+}
+.bf-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0 20px;
+}
+.bf-rank {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+}
+.bf-rank li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12px;
+}
+@media (max-width: 900px) {
+  .bf-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .bf-grid,
+  .bf-dossier-cols {
+    grid-template-columns: 1fr;
+  }
+}

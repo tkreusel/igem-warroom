@@ -1,4 +1,7 @@
 import { db } from '../db/db.ts';
+import { recentNews } from '../intel/breaking.ts';
+import { homeTeam, subscribedIds } from '../intel/watch.ts';
+import { detailCoverage, pagesTouched } from '../sync/diffs.ts';
 
 const HOUR = 3600_000;
 const DAY = 24 * HOUR;
@@ -37,6 +40,9 @@ export interface TeamSummary {
   rankTotal: number | null;
   /** Parts registry counts; null until the team's summary has been fetched. */
   registry: { published: number; draft: number; screening: number } | null;
+  subscribed: boolean;
+  /** Same iGEM village as the home team (direct competitors). */
+  sameVillage: boolean;
 }
 
 const dayStart = (t: number) => Math.floor(t / DAY) * DAY;
@@ -105,7 +111,16 @@ export function teamSummaries(now = Date.now()): TeamSummary[] {
     rank7d: null,
     rankTotal: null,
     registry: r.reg_found ? { published: r.reg_published, draft: r.reg_draft, screening: r.reg_screening } : null,
+    subscribed: false,
+    sameVillage: false,
   }));
+
+  const subs = subscribedIds();
+  const homeVillage = homeTeam()?.village ?? null;
+  for (const t of teams) {
+    t.subscribed = subs.has(t.id);
+    t.sameVillage = homeVillage !== null && t.village === homeVillage;
+  }
 
   assignRanks(teams, 'c7d', 'rank7d');
   assignRanks(teams, 'commits', 'rankTotal');
@@ -129,6 +144,10 @@ export interface TeamDetail extends TeamSummary {
   hourWeekday: number[][]; // [weekday 0=Sun][UTC hour] commit counts
   authors: { name: string; commits: number; additions: number; deletions: number; lastAt: number }[];
   recent: { sha: string; title: string; author: string; at: number; additions: number; deletions: number }[];
+  /** File-level detail; only collected for the home team and subscribed teams. */
+  pages: ReturnType<typeof pagesTouched> | null;
+  pageCoverage: { commits: number; detailed: number } | null;
+  news: { id: number; at: number; headline: string; severity: string }[];
 }
 
 export function teamDetail(id: number, now = Date.now()): TeamDetail | undefined {
@@ -172,8 +191,16 @@ export function teamDetail(id: number, now = Date.now()): TeamDetail | undefined
       .all(id) as any[]
   ).map((r) => ({ ...r }));
 
+  const watched = t.subscribed || t.id === homeTeam()?.id;
+  const weekAgo = now - 7 * DAY;
   return {
     ...t,
+    pages: watched ? pagesTouched(id, weekAgo, 20) : null,
+    pageCoverage: watched ? detailCoverage(id, weekAgo) : null,
+    news: recentNews(100)
+      .filter((n) => n.team?.id === id)
+      .slice(0, 10)
+      .map((n) => ({ id: n.id, at: n.at, headline: n.headline, severity: n.severity })),
     wikiUrl: `https://2026.igem.wiki/${t.slug}`,
     repoUrl: t.gitlabPath ? `https://gitlab.igem.org/${t.gitlabPath}` : null,
     regionRank7d: regionIdx >= 0 ? regionIdx + 1 : null,

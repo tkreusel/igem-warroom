@@ -25,8 +25,8 @@ export interface NewCommit {
 }
 
 const insertCommit = db.prepare(`
-  INSERT OR IGNORE INTO commits (team_id, sha, committed_at, authored_at, author_name, author_email, title, additions, deletions, is_template)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  INSERT OR IGNORE INTO commits (team_id, sha, committed_at, authored_at, author_name, author_email, title, additions, deletions, is_template, seen_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 
 const markSynced = db.prepare(`
   INSERT INTO sync_state (team_id, synced_activity, backfilled, last_sync_at, error_count, last_error)
@@ -41,7 +41,8 @@ const markError = db.prepare(`
   ON CONFLICT(team_id) DO UPDATE SET error_count = sync_state.error_count + 1, last_error = excluded.last_error,
     last_sync_at = excluded.last_sync_at`);
 
-function store(team: TeamRow, commits: GitlabCommit[]): NewCommit[] {
+/** `seenAt` is null for full (history) syncs so backfilled history never looks like a fresh push. */
+function store(team: TeamRow, commits: GitlabCommit[], seenAt: number | null): NewCommit[] {
   const fresh: NewCommit[] = [];
   const createdAt = team.project_created_at ?? 0;
   transaction(() => {
@@ -50,7 +51,7 @@ function store(team: TeamRow, commits: GitlabCommit[]): NewCommit[] {
       const isTemplate = committedAt <= createdAt + TEMPLATE_GRACE_MS ? 1 : 0;
       const res = insertCommit.run(
         team.id, c.id, committedAt, Date.parse(c.authored_date), c.author_name, c.author_email, c.title,
-        c.stats?.additions ?? 0, c.stats?.deletions ?? 0, isTemplate,
+        c.stats?.additions ?? 0, c.stats?.deletions ?? 0, isTemplate, seenAt,
       );
       if (res.changes > 0 && !isTemplate) {
         fresh.push({
@@ -78,7 +79,7 @@ export async function syncTeamCommits(
       critical: opts.critical,
       stop: opts.full ? undefined : (page) => page.some((c) => known.get(team.id, c.id)),
     });
-    const fresh = store(team, commits);
+    const fresh = store(team, commits, opts.full ? null : Date.now());
     markSynced.run(team.id, opts.activityAt ?? team.last_activity_at, opts.full ? 1 : 0, Date.now());
     // A full sync is history, not news; only incremental results go to the live feed.
     if (fresh.length && !opts.full) bus.emit('commits', fresh);

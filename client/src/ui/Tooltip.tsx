@@ -21,6 +21,13 @@ export function Tooltip({ team, x, y, now }: Props) {
           {team.city}, {team.country} · {regionLabel(team.region)} · {sectionLabel(team.section)}
         </span>
         {team.coordSource === 'city' && <span className="tt-sub">Location approximate (city centre)</span>}
+        {(team.subscribed || team.sameVillage || team.village) && (
+          <span className="tt-tags">
+            {team.subscribed && <span className="tag tag-watch">◆ WATCHLIST</span>}
+            {team.sameVillage && <span className="tag tag-village">VILLAGE RIVAL</span>}
+            {team.village && <span className="muted">{team.village}</span>}
+          </span>
+        )}
       </div>
       {!team.gitlabPath ? (
         <div className="tt-note">No public wiki repository</div>

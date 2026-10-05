@@ -182,6 +182,20 @@ class GitlabClient extends EventEmitter {
     if (opts.since) params.since = opts.since.toISOString();
     return this.paginate<GitlabCommit>(`/projects/${projectId}/repository/commits`, params, opts);
   }
+
+  /** Per-file diffs of one commit (paginated; wiki commits rarely exceed one page). */
+  async commitDiff(projectId: number, sha: string) {
+    return this.paginate<GitlabDiff>(`/projects/${projectId}/repository/commits/${sha}/diff`, {}, { maxPages: 3 });
+  }
+}
+
+export interface GitlabDiff {
+  old_path: string;
+  new_path: string;
+  new_file: boolean;
+  renamed_file: boolean;
+  deleted_file: boolean;
+  diff: string;
 }
 
 export const gitlab = new GitlabClient();

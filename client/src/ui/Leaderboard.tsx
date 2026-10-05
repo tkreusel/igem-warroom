@@ -5,11 +5,14 @@ import { Sparkline } from './Sparkline';
 
 export type Metric = 'c24h' | 'c7d' | 'commits' | 'heat';
 
+export type Scope = 'all' | 'village' | 'watch';
+
 export interface Filters {
   query: string;
   region: string;
   section: string;
   activeOnly: boolean;
+  scope: Scope;
 }
 
 const METRICS: { key: Metric; label: string }[] = [
@@ -64,6 +67,19 @@ export function Leaderboard({ teams, visible, metric, onMetric, filters, onFilte
       </div>
 
       <div className="filters">
+        <div className="seg seg-inline" role="tablist" aria-label="Scope">
+          {(
+            [
+              ['all', 'All teams'],
+              ['village', 'My village'],
+              ['watch', `Watchlist (${teams.filter((t) => t.subscribed).length})`],
+            ] as const
+          ).map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={filters.scope === k} className={filters.scope === k ? 'on' : ''} onClick={() => onFilters({ ...filters, scope: k })}>
+              {label}
+            </button>
+          ))}
+        </div>
         <input
           type="search"
           placeholder="Search team, city, country…"
@@ -113,7 +129,19 @@ export function Leaderboard({ teams, visible, metric, onMetric, filters, onFilte
             >
               <span className="lb-rank">{t[metric] > 0 ? i + 1 : '—'}</span>
               <span className="lb-main">
-                <span className="lb-name">{t.name}</span>
+                <span className="lb-name">
+                  {t.subscribed && (
+                    <span className="mark-watch" title="Watchlist">
+                      ◆{' '}
+                    </span>
+                  )}
+                  {t.sameVillage && !t.subscribed && t.slug !== homeSlug && (
+                    <span className="mark-village" title="Same village">
+                      ◌{' '}
+                    </span>
+                  )}
+                  {t.name}
+                </span>
                 <span className="lb-sub">
                   {t.country} · {fmtAgo(t.lastCommitAt, now)}
                 </span>

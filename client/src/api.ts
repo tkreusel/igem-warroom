@@ -28,6 +28,9 @@ export interface TeamSummary {
   rankTotal: number | null;
   /** Parts registry counts; null until fetched or when the team has no registry organisation. */
   registry: { published: number; draft: number; screening: number } | null;
+  subscribed: boolean;
+  /** Same iGEM village as the home team. */
+  sameVillage: boolean;
 }
 
 export interface TeamDetail extends TeamSummary {
@@ -39,6 +42,109 @@ export interface TeamDetail extends TeamSummary {
   hourWeekday: number[][];
   authors: { name: string; commits: number; additions: number; deletions: number; lastAt: number }[];
   recent: { sha: string; title: string; author: string; at: number; additions: number; deletions: number }[];
+  pages: PageTouch[] | null;
+  pageCoverage: { commits: number; detailed: number } | null;
+  news: { id: number; at: number; headline: string; severity: string }[];
+}
+
+export interface PageTouch {
+  path: string;
+  commits: number;
+  additions: number;
+  deletions: number;
+  lastAt: number;
+  created: boolean;
+}
+
+export type Relation = 'home' | 'subscribed' | 'village' | 'other';
+
+export interface NewsEvent {
+  id: number;
+  at: number;
+  type: 'code-drop' | 'burst' | 'parts-drop' | 'milestone';
+  severity: 'breaking' | 'flash';
+  score: number;
+  headline: string;
+  kicker: string;
+  team: { id: number; name: string; slug: string; country: string | null; village: string | null; lat: number | null; lng: number | null } | null;
+  relation: Relation | null;
+  detail: Record<string, unknown>;
+  test?: boolean;
+}
+
+export interface BriefTeamRef {
+  id: number;
+  name: string;
+  slug: string;
+  country: string | null;
+  village: string | null;
+  relation: Relation;
+}
+
+export interface TeamDossier {
+  team: BriefTeamRef;
+  commits: number;
+  additions: number;
+  deletions: number;
+  contributors: number;
+  lastCommitAt: number | null;
+  rank7d: number | null;
+  rank7dBefore: number | null;
+  recentCommits: { sha: string; title: string; author: string; at: number; additions: number; deletions: number }[];
+  authors: { name: string; commits: number }[];
+  pages: PageTouch[];
+  pageCoverage: { commits: number; detailed: number };
+  registry: { published: number; draft: number; screening: number; publishedChange: number | null; draftChange: number | null } | null;
+  news: { at: number; headline: string; severity: string }[];
+}
+
+export interface Briefing {
+  id: number | null;
+  preview?: boolean;
+  periodStart: number;
+  periodEnd: number;
+  generatedAt: number;
+  timeZone: string;
+  summary: string;
+  freeze: { at: number; remainingMs: number };
+  global: {
+    commits: number;
+    activeTeams: number;
+    additions: number;
+    deletions: number;
+    newlyActive: BriefTeamRef[];
+    partsPublished: number;
+    registryTotals: { published: number; draft: number };
+  };
+  home: TeamDossier | null;
+  village: {
+    name: string;
+    homeRank: number;
+    teams: {
+      team: BriefTeamRef;
+      commits24h: number;
+      lines24h: number;
+      commits7d: number;
+      published: number | null;
+      draft: number | null;
+      rank7d: number | null;
+    }[];
+  } | null;
+  subscribed: TeamDossier[];
+  topMovers: { team: BriefTeamRef; commits: number; additions: number; deletions: number; contributors: number }[];
+  biggestDrops: { team: BriefTeamRef; commits: number; additions: number; deletions: number }[];
+  climbers: { team: BriefTeamRef; rank: number; before: number | null; gain: number }[];
+  wentQuiet: { team: BriefTeamRef; commitsBefore: number }[];
+  partsLeaders: { team: BriefTeamRef; parts: number }[];
+  news: { at: number; headline: string; severity: string; kicker: string; teamId: number | null }[];
+}
+
+export interface BriefingListItem {
+  id: number;
+  periodStart: number;
+  periodEnd: number;
+  createdAt: number;
+  summary: string;
 }
 
 export interface FeedItem {
@@ -209,4 +315,17 @@ export const api = {
   registryTeams: () => get<RegistryTeamRow[]>('/api/registry/teams'),
   registryTeam: (id: number) => get<RegistryTeamDetail>(`/api/registry/teams/${id}`),
   registryFeed: (limit = 80) => get<RegistryFeedItem[]>(`/api/registry/feed?limit=${limit}`),
+  subscribe: (id: number) => send('PUT', `/api/subscriptions/${id}`),
+  unsubscribe: (id: number) => send('DELETE', `/api/subscriptions/${id}`),
+  news: (limit = 50) => get<NewsEvent[]>(`/api/news?limit=${limit}`),
+  testNews: () => send('POST', '/api/news/test'),
+  briefings: () => get<{ items: BriefingListItem[]; nextAt: number }>('/api/briefings'),
+  briefing: (id: number) => get<Briefing>(`/api/briefings/${id}`),
+  briefingPreview: () => get<Briefing>('/api/briefings/preview'),
 };
+
+async function send(method: string, path: string) {
+  const res = await fetch(path, { method });
+  if (!res.ok) throw new Error(`${res.status} ${path}`);
+  return res.json();
+}

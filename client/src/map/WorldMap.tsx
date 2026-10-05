@@ -14,7 +14,8 @@ import { heatColor, heatScale, markerRadius } from './heat';
 
 export interface WorldMapHandle {
   flyTo(teamId: number, scale?: number): void;
-  pulse(teamId: number): void;
+  /** 'commit' = amber ripple; 'alert' = red siren rings for breaking news (repeats for ~12 s). */
+  pulse(teamId: number, kind?: 'commit' | 'alert'): void;
   resetView(): void;
 }
 
@@ -60,6 +61,7 @@ const C = {
 };
 
 const PULSE_MS = 4500;
+const ALERT_MS = 12_000;
 
 /** Fit the initial view to 56°S–84°N (skip Antarctica); points along the edges cover the curved outline. */
 const INHABITED: GeoPermissibleObjects = {
@@ -98,7 +100,7 @@ export const WorldMap = forwardRef<WorldMapHandle, Props>(function WorldMap(prop
     geoHigh: null as BaseGeo | null,
     markers: [] as Marker[],
     tree: null as Quadtree<Marker> | null,
-    pulses: [] as { teamId: number; start: number }[],
+    pulses: [] as { teamId: number; start: number; kind: 'commit' | 'alert' }[],
     hoverId: null as number | null,
     baseDirty: true,
     overlayDirty: true,
@@ -266,11 +268,30 @@ export const WorldMap = forwardRef<WorldMapHandle, Props>(function WorldMap(prop
       }
     }
 
-    // Live pulses for new commits.
-    st.pulses = st.pulses.filter((pl) => now - pl.start < PULSE_MS);
+    // Live pulses: amber ripples for commits, red siren rings for breaking news.
+    st.pulses = st.pulses.filter((pl) => now - pl.start < (pl.kind === 'alert' ? ALERT_MS : PULSE_MS));
     for (const pl of st.pulses) {
       const m = st.markers.find((x) => x.team.id === pl.teamId);
       if (!m) continue;
+      if (pl.kind === 'alert') {
+        const age = now - pl.start;
+        const fade = Math.min(1, (ALERT_MS - age) / 2000);
+        // A new ring every 1.2 s, each expanding over 2.4 s.
+        for (let k = 0; k < 3; k++) {
+          const tt = ((age / 2400 + k / 3) % 1 + 1) % 1;
+          ctx.beginPath();
+          ctx.arc(m.sx, m.sy, Math.max(m.r * zr, 6) + tt * 70, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(255, 59, 48, ${(1 - tt) * 0.95 * fade})`;
+          ctx.lineWidth = 3 - tt * 2;
+          ctx.stroke();
+        }
+        ctx.beginPath();
+        ctx.arc(m.sx, m.sy, Math.max(m.r * zr, 6) + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255, 59, 48, ${0.9 * fade})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        continue;
+      }
       const t = (now - pl.start) / PULSE_MS;
       for (const lag of [0, 0.25]) {
         const tt = t - lag;
@@ -280,6 +301,34 @@ export const WorldMap = forwardRef<WorldMapHandle, Props>(function WorldMap(prop
         ctx.strokeStyle = `rgba(255, 216, 138, ${(1 - tt) * 0.9})`;
         ctx.lineWidth = 2;
         ctx.stroke();
+      }
+    }
+
+    // Watchlist: diamond frame. Village rivals: dashed ring. Shapes, not just colour.
+    for (const m of st.markers) {
+      if (!inView(m, 30) || m === home) continue;
+      const vis = p.isVisible(m.team);
+      if (!vis) continue;
+      const base = Math.max(m.team.gitlabPath && m.commits ? m.r * zr : 3 * zr, 3);
+      if (m.team.subscribed) {
+        const d = base + 6;
+        ctx.beginPath();
+        ctx.moveTo(m.sx, m.sy - d);
+        ctx.lineTo(m.sx + d, m.sy);
+        ctx.lineTo(m.sx, m.sy + d);
+        ctx.lineTo(m.sx - d, m.sy);
+        ctx.closePath();
+        ctx.strokeStyle = C.ink;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      } else if (m.team.sameVillage) {
+        ctx.beginPath();
+        ctx.arc(m.sx, m.sy, base + 4, 0, Math.PI * 2);
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = 'rgba(70, 224, 200, 0.7)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
     }
 
@@ -457,8 +506,8 @@ export const WorldMap = forwardRef<WorldMapHandle, Props>(function WorldMap(prop
       const t = zoomIdentity.translate(st.w / 2, st.h / 2).scale(k).translate(-m.bx, -m.by);
       select(overlayRef.current).transition().duration(1100).call(st.zoom.transform, t);
     },
-    pulse(teamId) {
-      s.current.pulses.push({ teamId, start: performance.now() });
+    pulse(teamId, kind = 'commit') {
+      s.current.pulses.push({ teamId, start: performance.now(), kind });
     },
     resetView() {
       const st = s.current;

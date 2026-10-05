@@ -103,6 +103,51 @@ CREATE TABLE IF NOT EXISTS reg_summary_history (
   PRIMARY KEY (team_id, at)
 );
 
+-- Teams the user follows closely: commit-level file details, briefing dossiers, lower alert thresholds.
+CREATE TABLE IF NOT EXISTS subscriptions (
+  team_id    INTEGER PRIMARY KEY,
+  created_at INTEGER NOT NULL
+);
+
+-- Per-file line counts for commits of watched teams (home + subscribed), from the commit diff endpoint.
+CREATE TABLE IF NOT EXISTS commit_files (
+  team_id   INTEGER NOT NULL,
+  sha       TEXT NOT NULL,
+  path      TEXT NOT NULL,
+  additions INTEGER NOT NULL DEFAULT 0,
+  deletions INTEGER NOT NULL DEFAULT 0,
+  change    TEXT NOT NULL DEFAULT 'modified',     -- added | deleted | renamed | modified
+  PRIMARY KEY (team_id, sha, path)
+);
+CREATE TABLE IF NOT EXISTS commit_diff_state (
+  team_id INTEGER NOT NULL,
+  sha     TEXT NOT NULL,
+  status  TEXT NOT NULL,                          -- done | failed
+  PRIMARY KEY (team_id, sha)
+);
+
+-- Notable happenings (breaking news, flashes, milestones). dedupe_key stops repeats.
+CREATE TABLE IF NOT EXISTS events (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  at         INTEGER NOT NULL,
+  type       TEXT NOT NULL,                       -- code-drop | burst | parts-drop | milestone
+  severity   TEXT NOT NULL,                       -- breaking | flash
+  team_id    INTEGER,
+  score      REAL NOT NULL,
+  headline   TEXT NOT NULL,
+  detail     TEXT NOT NULL,                       -- JSON
+  dedupe_key TEXT NOT NULL UNIQUE
+);
+CREATE INDEX IF NOT EXISTS idx_events_at ON events(at);
+
+CREATE TABLE IF NOT EXISTS briefings (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  period_start INTEGER NOT NULL,
+  period_end   INTEGER NOT NULL UNIQUE,
+  created_at   INTEGER NOT NULL,
+  body         TEXT NOT NULL                      -- JSON
+);
+
 CREATE TABLE IF NOT EXISTS kv (
   key   TEXT PRIMARY KEY,
   value TEXT
@@ -117,6 +162,9 @@ db.exec(SCHEMA);
 
 // Migrations for databases created by earlier versions.
 const teamCols = new Set((db.prepare('PRAGMA table_info(teams)').all() as { name: string }[]).map((c) => c.name));
+const commitCols = new Set((db.prepare('PRAGMA table_info(commits)').all() as { name: string }[]).map((c) => c.name));
+if (!commitCols.has('seen_at')) db.exec('ALTER TABLE commits ADD COLUMN seen_at INTEGER'); // when we first saw it (≈ push time)
+db.exec('CREATE INDEX IF NOT EXISTS idx_commits_seen ON commits(team_id, seen_at)');
 if (!teamCols.has('village')) db.exec('ALTER TABLE teams ADD COLUMN village TEXT');
 if (!teamCols.has('coord_source')) {
   db.exec('ALTER TABLE teams ADD COLUMN coord_source TEXT'); // registry | institution | city | missing

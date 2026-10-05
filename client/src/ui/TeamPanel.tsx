@@ -9,13 +9,14 @@ interface Props {
   loading: boolean;
   isHome: boolean;
   onClose: () => void;
+  onToggleSubscribe: (team: TeamDetail) => void;
   now: number;
 }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY = 86400_000;
 
-export function TeamPanel({ team, loading, isHome, onClose, now }: Props) {
+export function TeamPanel({ team, loading, isHome, onClose, onToggleSubscribe, now }: Props) {
   if (!team) {
     return (
       <aside className="team-panel panel">
@@ -33,11 +34,25 @@ export function TeamPanel({ team, loading, isHome, onClose, now }: Props) {
     <aside className="team-panel panel">
       <div className="panel-title">
         <span>
-          {isHome && <span className="tag tag-accent">HOME</span>} Target dossier
+          {isHome && <span className="tag tag-accent">HOME</span>}
+          {team.sameVillage && !isHome && <span className="tag tag-village">VILLAGE RIVAL</span>}
+          Target dossier
         </span>
-        <button className="btn btn-icon" onClick={onClose} aria-label="Close">
-          ✕
-        </button>
+        <span className="tp-actions">
+          {!isHome && (
+            <button
+              className={`btn btn-small-inline ${team.subscribed ? 'btn-on' : ''}`}
+              onClick={() => onToggleSubscribe(team)}
+              aria-pressed={team.subscribed}
+              title={team.subscribed ? 'Stop watching this team' : 'Watch: file-level detail, briefing dossier, lower alert threshold'}
+            >
+              {team.subscribed ? '◆ Watching' : '◇ Watch'}
+            </button>
+          )}
+          <button className="btn btn-icon" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
+        </span>
       </div>
 
       <div className="tp-head">
@@ -91,6 +106,56 @@ export function TeamPanel({ team, loading, isHome, onClose, now }: Props) {
               <span className="muted">No registry counts yet.</span>
             )}
           </Section>
+
+          {team.news.length > 0 && (
+            <Section title="News">
+              <ul className="tp-news">
+                {team.news.map((n) => (
+                  <li key={n.id} className={`sev-${n.severity}`}>
+                    <span className="bf-news-tag">{n.severity === 'breaking' ? 'BREAKING' : 'FLASH'}</span>
+                    <span>{n.headline}</span>
+                    <span className="muted">{fmtAgo(n.at, now)}</span>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
+
+          {team.pages ? (
+            <Section title="Pages & files touched · 7 days">
+              {team.pages.length ? (
+                <table className="tp-table">
+                  <tbody>
+                    {team.pages.map((p) => (
+                      <tr key={p.path}>
+                        <td className="mono bf-path" title={p.path}>
+                          {p.created && <span className="tag tag-dim">new</span>}
+                          {p.path}
+                        </td>
+                        <td className="num muted">{p.commits}×</td>
+                        <td className="num">
+                          <span className="add">+{fmtInt(p.additions)}</span> <span className="del">−{fmtInt(p.deletions)}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <span className="muted">No file detail yet.</span>
+              )}
+              {team.pageCoverage && team.pageCoverage.detailed < team.pageCoverage.commits && (
+                <div className="caption">
+                  Detail collected for {team.pageCoverage.detailed}/{team.pageCoverage.commits} commits; the rest is fetched as API budget allows.
+                </div>
+              )}
+            </Section>
+          ) : (
+            !isHome && (
+              <Section title="Pages & files touched">
+                <span className="muted">Watch this team to see which wiki pages and files they are editing.</span>
+              </Section>
+            )
+          )}
 
           <Section title="Commits per day · last 60 days">
             <DailyBars start={team.daily.start} counts={team.daily.counts} />

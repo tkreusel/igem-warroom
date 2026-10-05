@@ -26,4 +26,9 @@ export const config = {
   /** Keep this many anonymous requests in reserve for the live poller. */
   gitlabReserve: 25,
   gitlabConcurrency: 4,
+  /** Daily briefing: published at this wall-clock time in this zone, covering the preceding 24 h. */
+  briefingTime: env.BRIEFING_TIME ?? '09:00',
+  briefingTimeZone: env.BRIEFING_TZ ?? 'Europe/Berlin',
+  /** Lines changed by one team within the burst window that count as "breaking" for an ordinary team. */
+  breakingLines: Number(env.BREAKING_LINES ?? 4000),
 };
