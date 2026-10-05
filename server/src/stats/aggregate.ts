@@ -10,6 +10,7 @@ export interface TeamSummary {
   id: number;
   slug: string;
   name: string;
+  village: string | null;
   institution: string | null;
   city: string | null;
   country: string | null;
@@ -43,7 +44,7 @@ const dayStart = (t: number) => Math.floor(t / DAY) * DAY;
 export function teamSummaries(now = Date.now()): TeamSummary[] {
   const rows = db
     .prepare(`
-      SELECT t.id, t.slug, t.name, t.institution, t.city, t.country, t.region, t.section, t.status, t.lat, t.lng,
+      SELECT t.id, t.slug, t.name, t.village, t.institution, t.city, t.country, t.region, t.section, t.status, t.lat, t.lng,
              t.coord_source, t.gitlab_path, COALESCE(s.backfilled, 0) AS backfilled,
              COUNT(c.sha) AS commits, MAX(c.committed_at) AS last_commit_at,
              COALESCE(SUM(c.committed_at >= :d1), 0) AS c24h,
@@ -79,6 +80,7 @@ export function teamSummaries(now = Date.now()): TeamSummary[] {
     id: r.id,
     slug: r.slug,
     name: r.name,
+    village: r.village,
     institution: r.institution,
     city: r.city,
     country: r.country,

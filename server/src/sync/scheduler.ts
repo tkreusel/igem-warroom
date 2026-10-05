@@ -37,7 +37,7 @@ const log = (msg: string) => console.log(`${new Date().toISOString()} ${msg}`);
 async function ensureTeams() {
   const syncedAt = Number(kvGet('teams_synced_at') ?? 0);
   const count = (db.prepare('SELECT COUNT(*) AS n FROM teams').get() as { n: number }).n;
-  if (count > 0 && Date.now() - syncedAt < config.teamsRefreshHours * 3600_000) {
+  if (count > 0 && kvGet('villages_synced_at') && Date.now() - syncedAt < config.teamsRefreshHours * 3600_000) {
     status.teamsSyncedAt = syncedAt;
     // Cheap when nothing is missing; geocode results are cached.
     if ((await fillMissingCoordinates(log)).fixed) bus.emit('teams-updated');

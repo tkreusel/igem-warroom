@@ -4,6 +4,7 @@ import { HttpError, Semaphore, sleep } from './http.ts';
 export interface IgemTeamSummary {
   id: number;
   name: string;
+  villageUUID?: string | null;
   region: string;
   country: string;
   city: string;
@@ -49,4 +50,8 @@ export async function listTeams(year: number): Promise<IgemTeamSummary[]> {
 
 export function getTeam(id: number): Promise<IgemTeamDetail> {
   return getJson<IgemTeamDetail>(`/teams/${id}`);
+}
+
+export function listVillages(): Promise<{ uuid: string; name: string }[]> {
+  return getJson<{ uuid: string; name: string }[]>('/villages');
 }

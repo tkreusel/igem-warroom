@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS teams (
   id                 INTEGER PRIMARY KEY,        -- iGEM team id
   slug               TEXT NOT NULL UNIQUE,
   name               TEXT NOT NULL,
+  village            TEXT,
   institution        TEXT,
   city               TEXT,
   country            TEXT,                       -- ISO 3166-1 alpha-3
@@ -116,6 +117,7 @@ db.exec(SCHEMA);
 
 // Migrations for databases created by earlier versions.
 const teamCols = new Set((db.prepare('PRAGMA table_info(teams)').all() as { name: string }[]).map((c) => c.name));
+if (!teamCols.has('village')) db.exec('ALTER TABLE teams ADD COLUMN village TEXT');
 if (!teamCols.has('coord_source')) {
   db.exec('ALTER TABLE teams ADD COLUMN coord_source TEXT'); // registry | institution | city | missing
   db.exec(`UPDATE teams SET coord_source = 'registry'

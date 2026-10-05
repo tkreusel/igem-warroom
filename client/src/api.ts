@@ -2,6 +2,7 @@ export interface TeamSummary {
   id: number;
   slug: string;
   name: string;
+  village: string | null;
   institution: string | null;
   city: string | null;
   country: string | null;

@@ -44,8 +44,11 @@ export function TeamPanel({ team, loading, isHome, onClose, now }: Props) {
         <h2>{team.name}</h2>
         <div className="tp-sub">{team.institution}</div>
         <div className="tp-sub muted">
-          {team.city}, {team.country} · {regionLabel(team.region)} · {sectionLabel(team.section)}
+          {team.village ? `${team.village} Village · ` : ''}{sectionLabel(team.section)}
           {team.status !== 'accepted' && <span className="tag tag-warn"> {team.status}</span>}
+        </div>
+        <div className="tp-sub muted">
+          {team.city}, {team.country} · {regionLabel(team.region)}
         </div>
         <div className="tp-links">
           <a href={team.wikiUrl} target="_blank" rel="noreferrer">
