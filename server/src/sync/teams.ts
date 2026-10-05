@@ -20,7 +20,14 @@ export async function syncTeams(log: (msg: string) => void = console.log): Promi
   log(`[teams] fetching iGEM ${year} registry…`);
   const summaries = await listTeams(year);
   log(`[teams] ${summaries.length} teams in registry`);
-  const villages = new Map((await listVillages()).map((village) => [village.uuid, village.name]));
+  // Villages are a nice-to-have: if the lookup fails, keep the stored names rather than failing the sync.
+  let villages: Map<string, string> | null = null;
+  try {
+    villages = new Map((await listVillages()).map((village) => [village.uuid, village.name]));
+  } catch (err) {
+    log(`[teams] village lookup failed, keeping stored villages: ${String(err)}`);
+  }
+  const villageOf = (uuid: string | null | undefined) => (villages ? (villages.get(uuid ?? '') ?? null) : undefined);
 
   const known = new Map(
     (db.prepare('SELECT id, slug, detail_fetched_at FROM teams').all() as { id: number; slug: string; detail_fetched_at: number | null }[]).map(
@@ -38,7 +45,7 @@ export async function syncTeams(log: (msg: string) => void = console.log): Promi
     INSERT INTO teams (id, slug, name, village, institution, city, country, region, section, status, is_remote, lat, lng, coord_source, detail_fetched_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(id) DO UPDATE SET
-      slug = excluded.slug, name = excluded.name, village = excluded.village, institution = excluded.institution, city = excluded.city,
+      slug = excluded.slug, name = excluded.name, village = COALESCE(excluded.village, teams.village), institution = excluded.institution, city = excluded.city,
       country = excluded.country, region = excluded.region, section = excluded.section, status = excluded.status,
       is_remote = excluded.is_remote, detail_fetched_at = excluded.detail_fetched_at, updated_at = excluded.updated_at,
       -- Keep previously geocoded coordinates when the registry still has none.
@@ -52,18 +59,22 @@ export async function syncTeams(log: (msg: string) => void = console.log): Promi
     const inst = d.institutions?.[0];
     const valid = usableCoords(d.lat ?? null, d.lng ?? null, d.country);
     upsertDetail.run(
-      d.id, d.slug, d.name, villages.get(s.villageUUID ?? '') ?? null, inst?.name ?? null, d.city, d.country, d.region, d.section, d.status,
+      d.id, d.slug, d.name, villageOf(s.villageUUID) ?? null, inst?.name ?? null, d.city, d.country, d.region, d.section, d.status,
       d.isRemote ? 1 : 0, valid ? d.lat : null, valid ? d.lng : null, valid ? 'registry' : null, Date.now(), Date.now(),
     );
     if (++done % 50 === 0) log(`[teams]   ${done}/${needDetail.length}`);
   });
 
   // Registry fields that may change between detail refreshes (status, name).
-  const updateSummary = db.prepare('UPDATE teams SET name = ?, village = ?, status = ?, section = ?, region = ?, updated_at = ? WHERE id = ?');
+  const updateSummary = db.prepare('UPDATE teams SET name = ?, status = ?, section = ?, region = ?, updated_at = ? WHERE id = ?');
+  const updateVillage = db.prepare('UPDATE teams SET village = ? WHERE id = ?');
   transaction(() => {
-    for (const s of summaries) updateSummary.run(s.name, villages.get(s.villageUUID ?? '') ?? null, s.status, s.section, s.region, now, s.id);
+    for (const s of summaries) {
+      updateSummary.run(s.name, s.status, s.section, s.region, now, s.id);
+      if (villages) updateVillage.run(villageOf(s.villageUUID) ?? null, s.id);
+    }
   });
-  kvSet('villages_synced_at', String(now));
+  if (villages) kvSet('villages_synced_at', String(now));
 
   await fillMissingCoordinates(log);
 
